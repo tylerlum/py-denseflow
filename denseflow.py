@@ -50,13 +50,14 @@ def save_flows(flows, image, save_dir, num, bound):
     cv2.imwrite(save_y, flow_y)
 
 
-def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
+def dense_flow(abs_path_to_video, abs_path_to_output, step, bound, flow_type):
     '''
     To extract dense_flow images
     :param abs_path_to_video: absolute path to vidoe file to process
     :param abs_path_to_output: absolute path to where outputs should be saved
     :param step: num of frames between each two extracted frames
     :param bound: bi-bound parameter
+    :param flow_type: string type of optical flow to use
     :return: no returns
     '''
     # Setup optical flow calculator
@@ -104,10 +105,17 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
             # Calculate optical flow using dual tvl1 algorithm
             frame_0 = prev_gray
             frame_1 = gray
-            flowDTVL1 = dtvl1.calc(frame_0, frame_1, None)
+
+            if flow_type.lower() == "dtvl1":
+                flow = dtvl1.calc(frame_0, frame_1, None)
+            elif flow_type.lower() == "farneback":
+                flow = cv2.calcOpticalFlowFarneback(frame_0, frame_1, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+            else:
+                # Default dtvl1
+                flow = dtvl1.calc(frame_0, frame_1, None)
 
             # Save flow as image
-            save_flows(flowDTVL1, image, abs_path_to_output, num_frames_flow_processed, bound)
+            save_flows(flow, image, abs_path_to_output, num_frames_flow_processed, bound)
 
             # Update values for next loop
             prev_gray = gray
@@ -145,6 +153,7 @@ def parse_args():
     parser.add_argument('--output_root', default=os.path.join(ABS_PATH_TO_THIS_FILE_DIR, 'flows'), type=str)
     parser.add_argument('--step', default=1, type=int, help='gap between optical flow frames')
     parser.add_argument('--bound', default=15, type=int, help='maximum absolute optical flow value')
+    parser.add_argument('--flow_type', default="dtvl1", type=str, help='optical flow type')
     return parser.parse_args()
 
 
@@ -156,6 +165,7 @@ if __name__ == '__main__':
     output_root = args.output_root
     step = args.step
     bound = args.bound
+    flow_type = args.flow_type
 
     # Get video list
     video_list = [video for video in os.listdir(input_videos_root)]
@@ -169,4 +179,4 @@ if __name__ == '__main__':
         print("=============================================")
         abs_path_to_video = os.path.join(input_videos_root, video)
         abs_path_to_output = os.path.join(output_root, output_dir)
-        dense_flow(abs_path_to_video, abs_path_to_output, step, bound)
+        dense_flow(abs_path_to_video, abs_path_to_output, step, bound, flow_type)
