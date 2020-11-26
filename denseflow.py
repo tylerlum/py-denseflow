@@ -59,23 +59,30 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
     :param bound: bi-bound parameter
     :return: no returns
     '''
+    # Setup optical flow calculator
+    dtvl1 = cv2.optflow.createOptFlow_DualTVL1()
+
     # Setup video capture
     video_capture = cv2.VideoCapture(abs_path_to_video)
     if not video_capture.isOpened():
         print(f'Could not initialize capturing for {abs_path_to_video}')
         exit()
-    total_num_frames = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
+    total_num_frames = int(video_capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
     image, prev_image, gray, prev_gray = None, None, None, None
     num_frames_flow_processed, num_frames_seen = 0, 0
 
     while True:
+        # Get next frame
         valid, frame = video_capture.read()
         if not valid:
             print(f"Done processing {abs_path_to_video}")
             break
         num_frames_seen += 1
         print(f"On frame {num_frames_seen} / {total_num_frames}. Flow processed: {num_frames_flow_processed}")
+
+        # Resize for consistent resolution
+        frame = cv2.resize(frame, (224, 224))
 
         # Handle first loop
         if num_frames_flow_processed == 0:
@@ -97,7 +104,6 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
             # Calculate optical flow using dual tvl1 algorithm
             frame_0 = prev_gray
             frame_1 = gray
-            dtvl1 = cv2.optflow.createOptFlow_DualTVL1()
             flowDTVL1 = dtvl1.calc(frame_0, frame_1, None)
 
             # Save flow as image
