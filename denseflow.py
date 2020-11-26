@@ -18,8 +18,7 @@ def ToImg(raw_flow, bound):
     flow = raw_flow
     flow[flow > bound] = bound
     flow[flow < -bound] = -bound
-    # flow -= -bound
-    flow -= bound  # TODO IS THIS RIGHT
+    flow += bound
     flow *= (255 / float(2 * bound))
     return flow
 
@@ -61,20 +60,22 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
     :return: no returns
     '''
     # Setup video capture
-    videocapture = cv2.VideoCapture(abs_path_to_video)
-    if not videocapture.isOpened():
+    video_capture = cv2.VideoCapture(abs_path_to_video)
+    if not video_capture.isOpened():
         print(f'Could not initialize capturing for {abs_path_to_video}')
         exit()
+    total_num_frames = video_capture.get(cv2.CAP_PROP_FRAME_COUNT)
 
     image, prev_image, gray, prev_gray = None, None, None, None
     num_frames_flow_processed, num_frames_seen = 0, 0
 
     while True:
-        valid, frame = videocapture.read()
+        valid, frame = video_capture.read()
         if not valid:
             print(f"Done processing {abs_path_to_video}")
             break
         num_frames_seen += 1
+        print(f"On frame {num_frames_seen} / {total_num_frames}. Flow processed: {num_frames_flow_processed}")
 
         # Handle first loop
         if num_frames_flow_processed == 0:
@@ -85,7 +86,7 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
 
             # Move forward step-1 frames
             for _ in range(step - 1):
-                _ = videocapture.read()
+                _ = video_capture.read()
                 num_frames_seen += 1
 
         # Regular case
@@ -109,7 +110,7 @@ def dense_flow(abs_path_to_video, abs_path_to_output, step, bound):
 
             # Move forward step-1 frames
             for _ in range(step - 1):
-                _ = videocapture.read()
+                _ = video_capture.read()
                 num_frames_seen += 1
 
 
@@ -158,6 +159,8 @@ if __name__ == '__main__':
 
     # Dense flow for all videos
     for video, output_dir in zip(video_list, output_dirs):
+        print(f"Processing {video}")
+        print("=============================================")
         abs_path_to_video = os.path.join(input_videos_root, video)
         abs_path_to_output = os.path.join(output_root, output_dir)
         dense_flow(abs_path_to_video, abs_path_to_output, step, bound)
